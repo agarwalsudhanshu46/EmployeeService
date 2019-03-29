@@ -34,7 +34,7 @@ public class EmployeeController {
 
 
 	@Autowired
-	private PdfExcelAndCsvService pdfAndExcelService;
+	private PdfExcelAndCsvService<Employee> pdfAndExcelService;
 
 
 	@Autowired
@@ -42,14 +42,13 @@ public class EmployeeController {
 
 
 	
-	@PostMapping(value = "/printPdf")
-	public void getCandidates(@RequestBody CandidateRequest candidateRequest, 
+	@GetMapping(value = "/printPdf")
+	public void getCandidates(/*@RequestBody CandidateRequest candidateRequest,*/ 
 			HttpServletRequest request, HttpServletResponse response) throws Exception {
-		System.out.println("this is sudhanshu");
+/*		System.out.println("this is sudhanshu");
 		if(!candidateRequest.getClass().getSimpleName().equals("EmployeeRequest")) {
 			throw new Exception();
-		}
-		Candidate ca = new Employee();
+		}*/
 		List<Employee> employees =  employeeService.getEmployees();
 		boolean isValidPdf = pdfAndExcelService.createPdf(employees, context, request, response);
 
@@ -112,7 +111,7 @@ public class EmployeeController {
 		}
 	}
 */
-	private void fileDownload(String fullPath, HttpServletResponse response, String fileName,
+/*	private void fileDownload(String fullPath, HttpServletResponse response, String fileName,
 			String... functionalityName) {
 		File file = new File(fullPath);
 		final int BUFFER_SIZE = 4096;
@@ -141,5 +140,5 @@ public class EmployeeController {
 			}
 		}
 
-	}
+	}*/
 }
