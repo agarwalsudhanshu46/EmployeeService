@@ -3,12 +3,16 @@ package com.example.EmployeeService.controller;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,12 +21,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.EmployeeService.dto.request.GenericRequestModel;
 import com.example.EmployeeService.service.EmployeeService;
 import com.example.sid.pdfGenratorDemo.constant.FileConstant;
 import com.example.sid.pdfGenratorDemo.dto.request.CandidateRequest;
 import com.example.sid.pdfGenratorDemo.dto.response.Candidate;
 import com.example.sid.pdfGenratorDemo.dto.response.Employee;
 import com.example.sid.pdfGenratorDemo.service.PdfExcelAndCsvService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.util.JSONPObject;
 
 //@Controller  -> used to show the data in view (html) format
 @RestController
@@ -41,23 +49,101 @@ public class EmployeeController {
 	private ServletContext context;
 
 
-	
-	@GetMapping(value = "/printPdf")
-	public void getCandidates(/*@RequestBody CandidateRequest candidateRequest,*/ 
-			HttpServletRequest request, HttpServletResponse response) throws Exception {
+	@PostMapping(value = "/printPdf")
+	public void getPdf(/*@RequestBody CandidateRequest candidateRequest, */
+		 @RequestBody String body, HttpServletRequest request, HttpServletResponse response) throws Exception {
 /*		System.out.println("this is sudhanshu");
 		if(!candidateRequest.getClass().getSimpleName().equals("EmployeeRequest")) {
 			throw new Exception();
 		}*/
+		System.out.println("sasa");
+		if(body != null) {
+			System.out.println();
+			
+/*		    JSONPObject request1 = new JSONPObject("model", body);
+		    String a = request1.getFunction();
+		    Object obj = request1.getValue();
+		    
+		    System.out.println(a);*/
+		    
+			ObjectMapper mapper = new ObjectMapper();
+			GenericRequestModel model = mapper.readValue(body, GenericRequestModel.class); 
+			
+			//Object ob = model.getOb();
+		//	System.out.println("dsdsw");
+			Map<String, Object> details = model.getRequestDetails();
+/*			for(String key: details.keySet()) {
+				 System.out.println(key+": "+ details.get(key));
+			}*/
+			//System.out.println(details.get("genericData"));
+		
+		//request.getParameterMap().forEach((K,V) ->System.out.println(K + "   " +  V));
+			//details.forEach((K,V) ->System.out.println(K + "   " +  V));
+
+			String columnKey = "columns";
+			List<String> columns = (List<String>)details.get(columnKey);
+			
+			String filterKey = "filter";
+			Map<String, String> filter = (Map<String, String>)details.get(filterKey);
+			
+			String type = "type";
+			String mapType = (String)details.get(type);
+			
+		List<Employee> employees =  employeeService.getEmployees(columns, filter);
+		
+/*		ObjectMapper objMapper = new ObjectMapper();
+		String employee = objMapper.writeValueAsString(employees);*/
+		JSONArray employeeJsonArray = toJSONArray(employees);
+		
+		boolean isValidPdf = pdfAndExcelService.createPdf(employeeJsonArray, context, request, response, columns, mapType);
+
+		if (isValidPdf) {
+			String fullPath = request.getServletContext().getRealPath(FileConstant.resourceFolder + FileConstant.employeePdfExtension);
+			pdfAndExcelService.fileDownload(fullPath, response, FileConstant.employeePdfExtension, context, FileConstant.printFunctionality);
+		}
+		}
+		
+	}
+	
+    public static JSONObject toJSON(Object object) throws  IllegalAccessException {
+        Class c = object.getClass();
+        JSONObject jsonObject = new JSONObject();
+        for (Field field : c.getDeclaredFields()) {
+            field.setAccessible(true);
+            String name = field.getName();
+            String value = String.valueOf(field.get(object));
+            jsonObject.put(name, value);
+        }
+        return jsonObject;
+    }
+
+
+    public static JSONArray toJSONArray(List<Employee> employees ) throws  IllegalAccessException {
+        JSONArray jsonArray = new JSONArray();
+        for (Object i : employees) {
+        	JSONObject jsonObject = toJSON(i);
+            jsonArray.put(jsonObject);
+        }
+        return jsonArray;
+    }
+/*	@GetMapping(value = "/printPdf")
+	public void getCandidates(@RequestBody CandidateRequest candidateRequest, 
+		 @RequestBody String body, HttpServletRequest request, HttpServletResponse response) throws Exception {
+		System.out.println("this is sudhanshu");
+		if(!candidateRequest.getClass().getSimpleName().equals("EmployeeRequest")) {
+			throw new Exception();
+		}
+		
+		request.getParameterMap().forEach((K,V) ->System.out.println(K + "   " +  V));
 		List<Employee> employees =  employeeService.getEmployees();
-		boolean isValidPdf = pdfAndExcelService.createPdf(employees, context, request, response);
+		//boolean isValidPdf = pdfAndExcelService.createPdf(employees, context, request, response);
 
 		if (isValidPdf) {
 			String fullPath = request.getServletContext().getRealPath(FileConstant.resourceFolder + FileConstant.employeePdfExtension);
 			pdfAndExcelService.fileDownload(fullPath, response, FileConstant.employeePdfExtension, context, FileConstant.printFunctionality);
 		}
 		
-	}
+	}*/
 	
 	
 /*	@GetMapping(value = "/employees")
